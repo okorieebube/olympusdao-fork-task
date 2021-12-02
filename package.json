@@ -1,0 +1,25 @@
+{
+  "name": "olympusdao-fork",
+  "version": "1.0.0",
+  "main": "index.js",
+  "author": "kelvin <okorieebube1@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@openzeppelin/contracts": "2.5",
+    "hardhat": "^2.7.0"
+  },
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.0.0",
+    "@nomiclabs/hardhat-waffle": "^2.0.0",
+    "chai": "^4.2.0",
+    "ethereum-waffle": "^3.0.0",
+    "ethers": "^5.0.0"
+  },
+  "scripts": {
+    "start": "npx hardhat node",
+    "clean": "npx hardhat clean",
+    "compile": "npx hardhat compile",
+    "test": "hardhat test --network hardhat",
+    "run": "npx hardhat run --network hardhat scripts/run.js"
+  }
+}
