@@ -12,53 +12,24 @@ const { latestTime } = require("./latest-time");
 
  */
 
-// Increases blockchain time by the passed duration in seconds
-function increaseTime(duration) {
-  const id = Date.now();
-  //   hre.ethers.provider.
-  return new Promise((resolve, reject) => {
-    // web3.currentProvider.sendAsync(
-    hre.ethers.provider.sendAsync(
-      {
-        jsonrpc: "2.0",
-        method: "evm_increaseTime",
-        params: [duration],
-        id: id,
-      },
-      (err1) => {
-        if (err1) return reject(err1);
-
-        // web3.currentProvider.sendAsync(
-        hre.ethers.provider.sendAsync(
-          {
-            jsonrpc: "2.0",
-            method: "evm_mine",
-            id: id + 1,
-          },
-          (err2, res) => {
-            return err2 ? reject(err2) : resolve(res);
-          }
-        );
-      }
-    );
-  });
-}
-
 /**
- * Beware that due to the need of calling two separate ganache methods and rpc calls overhead
- * it's hard to increase time precisely to a target point so design your test to tolerate
- * small fluctuations from time to time.
+ * Forwards blockchain time to the passed argument in seconds.
  *
  * @param target time in seconds
  */
-function increaseTimeTo(target) {
-  let now = latestTime();
-  if (target < now)
-    throw Error(
-      `Cannot increase current time(${now}) to a moment in the past(${target})`
-    );
-  let diff = target - now;
-  return increaseTime(diff);
+async function increaseTimeTo(target) {
+  try {
+    let now = await latestTime();
+    if (target < now)
+      throw Error(
+        `Cannot increase current time(${now}) to a moment in the past(${target})`
+      );
+
+    let res = await ethers.provider.send("evm_mine", [target]);
+    return res;
+  } catch (err) {
+    console.log(err);
+  }
 }
 
 const duration = {
@@ -83,7 +54,6 @@ const duration = {
 };
 
 module.exports = {
-  increaseTime,
   increaseTimeTo,
   duration,
 };

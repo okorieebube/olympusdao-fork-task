@@ -2,12 +2,16 @@ const { expect } = require("chai");
 const { ethers } = require("hardhat");
 const { latestTime } = require("../helpers/latest-time");
 const { increaseTimeTo, duration } = require("../helpers/increase-time");
+const { BigNumber } = require("@ethersproject/bignumber");
+const { utils } = require("ethers");
 
 describe("FanetyCrowdsale contract", async function () {
   before(async () => {
     [
       deployer,
-      investor,
+      investor1,
+      investor2,
+      investor3,
       PrivatePresaleAddress,
       DexesLiquidityAddress,
       CexesLiquidityAddress,
@@ -27,7 +31,6 @@ describe("FanetyCrowdsale contract", async function () {
     Fanety = await hre.ethers.getContractFactory("Fanety");
     FanetyCrowdsale = await hre.ethers.getContractFactory("FanetyCrowdsale");
     TokenTimelock = await hre.ethers.getContractFactory("TokenTimelock");
-
 
     // DEPLOY TOKEN
     fanety = await Fanety.deploy(_initialSupply);
@@ -136,6 +139,11 @@ describe("FanetyCrowdsale contract", async function () {
         Number(LiquidityAndReserves);
       expect(total).to.equal(100);
     });
+    it("should only be done by deployer", async function () {
+      await expect(
+        fanetyCrowdsale.connect(investor1).distributeAndLockTokens()
+      ).to.be.revertedWith("Ownable: caller is not the owner");
+    });
   });
 
   describe("Token timelock", () => {
@@ -216,7 +224,7 @@ describe("FanetyCrowdsale contract", async function () {
     });
 
     it("should not allow token withdrawal before release time", async function () {
-      const PrivatePresaleTimelock = await TokenTimelock.attach(
+      let PrivatePresaleTimelock = await TokenTimelock.attach(
         await fanetyCrowdsale.PrivatePresaleTimelock()
       );
       await expect(
@@ -224,6 +232,100 @@ describe("FanetyCrowdsale contract", async function () {
       ).to.be.revertedWith(
         "TokenTimelock: current time is before release time"
       );
+
+      let DexesLiquidityTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.DexesLiquidityTimelock()
+      );
+      await expect(
+        DexesLiquidityTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+      let CexesLiquidityTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.CexesLiquidityTimelock()
+      );
+      await expect(
+        CexesLiquidityTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+      let MarketingAndCreatorsTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.MarketingAndCreatorsTimelock()
+      );
+      await expect(
+        MarketingAndCreatorsTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+
+      let PlatformDevelopmentTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.PlatformDevelopmentTimelock()
+      );
+      await expect(
+        PlatformDevelopmentTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+      let TeamAndEmployeesTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.TeamAndEmployeesTimelock()
+      );
+      await expect(
+        TeamAndEmployeesTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+      let AdvisorsTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.AdvisorsTimelock()
+      );
+      await expect(
+        AdvisorsTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
+      let LiquidityAndReservesTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.LiquidityAndReservesTimelock()
+      );
+      await expect(
+        LiquidityAndReservesTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
     });
+    it("should allow token withdrawal once its release time", async function () {
+      await increaseTimeTo(_releaseTime + 1);
+
+      let PrivatePresaleTimelockAddress =
+        await fanetyCrowdsale.PrivatePresaleTimelock();
+      let PrivatePresaleTimelock = await TokenTimelock.attach(
+        PrivatePresaleTimelockAddress
+      );
+      await PrivatePresaleTimelock.connect(deployer).release();
+      let PrivatePresaleTimelockBalance = await fanety.balanceOf(
+        PrivatePresaleTimelockAddress
+      );
+      expect(BigNumber.from(PrivatePresaleTimelockBalance)).to.equal(0);
+      let PrivatePresaleBalance =
+        (await fanety.balanceOf(PrivatePresaleAddress.address)) /
+        10 ** _decimals;
+      expect(PrivatePresaleBalance).to.equal(
+        (_PrivatePresale * BigNumber.from(_initialSupply / 10 ** _decimals)) /
+          100
+      );
+    });
+  });
+
+  describe("Token Crowdsale", () => {
+    before(async function () {
+      // token vesting period should be over
+      // token will be released from presale lock
+      // token will be sent to crowdsale address
+
+    });
+    // it("should allow users to buy token", async function () {
+    //   let purchaseToken = await fanetyCrowdsale
+    //     .connect(investor1)
+    //     .buyTokens(investor1.address, { value: ethers.utils.parseEther('1') });
+    //     console.log(purchaseToken)
+    // });
   });
 });
