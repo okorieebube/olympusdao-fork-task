@@ -1,7 +1,7 @@
 const { expect } = require("chai");
 const { ethers } = require("hardhat");
-const {latestTime} = require("../helpers/latest-time")
-const {increaseTimeTo, duration} = require("../helpers/increase-time")
+const { latestTime } = require("../helpers/latest-time");
+const { increaseTimeTo, duration } = require("../helpers/increase-time");
 
 describe("FanetyCrowdsale contract", async function () {
   before(async () => {
@@ -25,6 +25,11 @@ describe("FanetyCrowdsale contract", async function () {
     _initialSupply = "3000000000000000000000000"; // 3,000,000 000000000000000000 = 3million
 
     Fanety = await hre.ethers.getContractFactory("Fanety");
+    FanetyCrowdsale = await hre.ethers.getContractFactory("FanetyCrowdsale");
+    TokenTimelock = await hre.ethers.getContractFactory("TokenTimelock");
+
+
+    // DEPLOY TOKEN
     fanety = await Fanety.deploy(_initialSupply);
 
     // TOKEN DISTRIBUTION
@@ -41,11 +46,9 @@ describe("FanetyCrowdsale contract", async function () {
     _rate = 500;
     _wallet = deployer.address;
     _token = fanety.address;
-    _releaseTime = await latestTime() + duration.weeks(1);
-    console.log({"deployer":deployer.address});
+    _releaseTime = (await latestTime()) + duration.weeks(1); //  1 week from deployment
 
     // DEPLOY CROWDSALE
-    FanetyCrowdsale = await hre.ethers.getContractFactory("FanetyCrowdsale");
     fanetyCrowdsale = await FanetyCrowdsale.deploy(
       _rate,
       _wallet,
@@ -60,9 +63,14 @@ describe("FanetyCrowdsale contract", async function () {
       LiquidityAndReservesAddress.address,
       _releaseTime
     );
-    // await fanetyCrowdsale.distributeAndLockTokens();
 
-    
+    // TRANSFER TOKENS FROM DEPLOYER TO CROWDSALE CONTRACT
+    await fanety
+      .connect(deployer)
+      .transfer(fanetyCrowdsale.address, _initialSupply);
+
+    // DISTRIBUTE TOKENS VIA TOKENOMICS
+    await fanetyCrowdsale.distributeAndLockTokens();
   });
 
   describe("Crowdsale setup", () => {
@@ -77,6 +85,11 @@ describe("FanetyCrowdsale contract", async function () {
     it("should have the correct token  address", async function () {
       let token = await fanetyCrowdsale.token();
       expect(token).to.equal(_token);
+    });
+
+    it("the deployer balance should equal zero", async function () {
+      let balance = await fanety.balanceOf(deployer.address);
+      expect(balance).to.equal(0);
     });
   });
 
@@ -111,7 +124,7 @@ describe("FanetyCrowdsale contract", async function () {
       /* 
       let total_supply = await fanety.totalSupply();
       console.log((total_supply.toNumber()).toString());
- */
+      */
       let total =
         Number(PrivatePresale) +
         Number(DexesLiquidity) +
@@ -122,6 +135,95 @@ describe("FanetyCrowdsale contract", async function () {
         Number(Advisors) +
         Number(LiquidityAndReserves);
       expect(total).to.equal(100);
+    });
+  });
+
+  describe("Token timelock", () => {
+    it("address balances should equal their equivalent percentage", async function () {
+      const PrivatePresaleTimelock =
+        await fanetyCrowdsale.PrivatePresaleTimelock();
+      const PrivatePresaleTimelockBalance = await fanety.balanceOf(
+        PrivatePresaleTimelock
+      );
+      expect(Number(PrivatePresaleTimelockBalance)).to.equal(
+        (_PrivatePresale * Number(_initialSupply)) / 100
+      );
+
+      const DexesLiquidityTimelock =
+        await fanetyCrowdsale.DexesLiquidityTimelock();
+      const DexesLiquidityTimelockBalance = await fanety.balanceOf(
+        DexesLiquidityTimelock
+      );
+      expect(Number(DexesLiquidityTimelockBalance)).to.equal(
+        (_DexesLiquidity * Number(_initialSupply)) / 100
+      );
+
+      const CexesLiquidityTimelock =
+        await fanetyCrowdsale.CexesLiquidityTimelock();
+      const CexesLiquidityTimelockBalance = await fanety.balanceOf(
+        CexesLiquidityTimelock
+      );
+      expect(Number(CexesLiquidityTimelockBalance)).to.equal(
+        (_CexesLiquidity * Number(_initialSupply)) / 100
+      );
+
+      const MarketingAndCreatorsTimelock =
+        await fanetyCrowdsale.MarketingAndCreatorsTimelock();
+      const MarketingAndCreatorsTimelockBalance = await fanety.balanceOf(
+        MarketingAndCreatorsTimelock
+      );
+      expect(Number(MarketingAndCreatorsTimelockBalance)).to.equal(
+        (_MarketingAndCreators * Number(_initialSupply)) / 100
+      );
+
+      const PlatformDevelopmentTimelock =
+        await fanetyCrowdsale.PlatformDevelopmentTimelock();
+      const PlatformDevelopmentTimelockBalance = await fanety.balanceOf(
+        PlatformDevelopmentTimelock
+      );
+      expect(Number(PlatformDevelopmentTimelockBalance)).to.equal(
+        (_PlatformDevelopment * Number(_initialSupply)) / 100
+      );
+
+      const TeamAndEmployeesTimelock =
+        await fanetyCrowdsale.TeamAndEmployeesTimelock();
+      const TeamAndEmployeesTimelockBalance = await fanety.balanceOf(
+        TeamAndEmployeesTimelock
+      );
+      expect(Number(TeamAndEmployeesTimelockBalance)).to.equal(
+        (_TeamAndEmployees * Number(_initialSupply)) / 100
+      );
+      /* 
+        const AdvisorsTimelock =
+          await fanetyCrowdsale.AdvisorsTimelock();
+        const AdvisorsTimelockBalance = await fanety.balanceOf(
+          AdvisorsTimelock
+        );
+        console.log(_Advisors * Number(_initialSupply));
+        console.log((_Advisors * Number(_initialSupply)) / 100);
+        expect(Number(AdvisorsTimelockBalance)).to.equal(
+          (_Advisors * Number(_initialSupply)) / 100
+        );
+      */
+      const LiquidityAndReservesTimelock =
+        await fanetyCrowdsale.LiquidityAndReservesTimelock();
+      const LiquidityAndReservesTimelockBalance = await fanety.balanceOf(
+        LiquidityAndReservesTimelock
+      );
+      expect(Number(LiquidityAndReservesTimelockBalance)).to.equal(
+        (_LiquidityAndReserves * Number(_initialSupply)) / 100
+      );
+    });
+
+    it("should not allow token withdrawal before release time", async function () {
+      const PrivatePresaleTimelock = await TokenTimelock.attach(
+        await fanetyCrowdsale.PrivatePresaleTimelock()
+      );
+      await expect(
+        PrivatePresaleTimelock.connect(deployer).release()
+      ).to.be.revertedWith(
+        "TokenTimelock: current time is before release time"
+      );
     });
   });
 });

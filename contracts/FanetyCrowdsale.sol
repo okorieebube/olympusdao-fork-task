@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.5.5;
+import "@openzeppelin/contracts/ownership/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/crowdsale/Crowdsale.sol";
 import "@openzeppelin/contracts/token/ERC20/TokenTimelock.sol";
 import "hardhat/console.sol";
 
-contract FanetyCrowdsale is Crowdsale {
+contract FanetyCrowdsale is Crowdsale, Ownable {
     // TOKEN DISTRIBUTION
     uint256 public PrivatePresale = 8;
     uint256 public DexesLiquidity = 20;
@@ -54,7 +55,6 @@ contract FanetyCrowdsale is Crowdsale {
         address _LiquidityAndReservesAddress,
         uint256 _releaseTime
     ) public Crowdsale(rate, wallet, token) {
-        // console.log(token.address);
         PrivatePresaleAddress = _PrivatePresaleAddress;
         DexesLiquidityAddress = _DexesLiquidityAddress;
         CexesLiquidityAddress = _CexesLiquidityAddress;
@@ -65,15 +65,12 @@ contract FanetyCrowdsale is Crowdsale {
         LiquidityAndReservesAddress = _LiquidityAndReservesAddress;
         Fanetytoken = token;
         releaseTime = _releaseTime;
-
-        // DISTRIBUTE TOKENS VIA TOKENOMICS
-        distributeAndLockTokens();
     }
 
     /**
      * will be called by owner when crowdsale has been completed, to transfer the tokens
      */
-    function distributeAndLockTokens() public  {
+    function distributeAndLockTokens() public onlyOwner {
         IERC20 _FanetyToken = IERC20(Fanetytoken);
         uint256 totalSupply = _FanetyToken.totalSupply();
 
@@ -119,43 +116,38 @@ contract FanetyCrowdsale is Crowdsale {
             releaseTime
         );
 
-        uint256 balance = _FanetyToken.balanceOf(msg.sender);
-        console.log(address(this));
 
-        // transfer tokens to vault till release time
-        _FanetyToken.approve(address(this), totalSupply.mul(PrivatePresale).div(100));
-        _FanetyToken.transferFrom(
-            msg.sender,
+        _FanetyToken.transfer(
             address(PrivatePresaleTimelock),
             totalSupply.mul(PrivatePresale).div(100)
         );
         _FanetyToken.transfer(
             address(DexesLiquidityTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(DexesLiquidity).div(100)
         );
         _FanetyToken.transfer(
             address(CexesLiquidityTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(CexesLiquidity).div(100)
         );
         _FanetyToken.transfer(
             address(MarketingAndCreatorsTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(MarketingAndCreators).div(100)
         );
         _FanetyToken.transfer(
             address(PlatformDevelopmentTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(PlatformDevelopment).div(100)
         );
         _FanetyToken.transfer(
             address(TeamAndEmployeesTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(TeamAndEmployees).div(100)
         );
         _FanetyToken.transfer(
             address(AdvisorsTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(Advisors).div(100)
         );
         _FanetyToken.transfer(
             address(LiquidityAndReservesTimelock),
-            totalSupply.mul(PrivatePresale).div(100)
+            totalSupply.mul(LiquidityAndReserves).div(100)
         );
     }
 }
