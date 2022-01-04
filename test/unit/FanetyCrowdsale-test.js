@@ -115,7 +115,7 @@ describe("FanetyCrowdsale contract", async function () {
       let LiquidityAndReserves = await fanetyCrowdsale.LiquidityAndReserves();
       expect(LiquidityAndReserves).to.equal(_LiquidityAndReserves);
     });
-    it("should equal hundered percent", async function () {
+    it("should equal hundred percent", async function () {
       let PrivatePresale = await fanetyCrowdsale.PrivatePresale();
       let DexesLiquidity = await fanetyCrowdsale.DexesLiquidity();
       let CexesLiquidity = await fanetyCrowdsale.CexesLiquidity();
